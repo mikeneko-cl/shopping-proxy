@@ -1,46 +1,25 @@
-export const config = { runtime: 'edge' };
-
-export default async function handler(req) {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Notion-Version',
-  };
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Notion-Version');
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return res.status(200).end();
   }
 
-  const { searchParams } = new URL(req.url);
-  const path = searchParams.get('path');
-  if (!path) {
-    return new Response(JSON.stringify({ error: 'path required' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+  const path = req.query.path;
+  if (!path) return res.status(400).json({ error: 'path required' });
+
+  const url = `https://api.notion.com/v1${path}`;
+  const headers = { 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' };
+  if (req.headers['authorization']) headers['Authorization'] = req.headers['authorization'];
+
+  const opts = { method: req.method, headers };
+  if (req.method === 'POST' || req.method === 'PATCH') {
+    opts.body = JSON.stringify(req.body ?? {});
   }
 
-  try {
-    const notionHeaders = {
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    };
-    const auth = req.headers.get('authorization');
-    if (auth) notionHeaders['Authorization'] = auth;
-
-    const fetchOptions = { method: req.method, headers: notionHeaders };
-    if (req.method === 'POST' || req.method === 'PATCH') {
-      fetchOptions.body = await req.text();
-    }
-
-    const notionRes = await fetch(`https://api.notion.com/v1${path}`, fetchOptions);
-    const text = await notionRes.text();
-    return new Response(text, {
-      status: notionRes.status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
+  const r = await fetch(url, opts);
+  const json = await r.json();
+  return res.status(r.status).json(json);
 }
