@@ -1,7 +1,3 @@
-import { buffer } from 'micro';
-
-export const config = { api: { bodyParser: false } };
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
@@ -19,24 +15,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const notionHeaders = {
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    };
-    if (req.headers['authorization']) {
-      notionHeaders['Authorization'] = req.headers['authorization'];
-    }
+    const url = `https://api.notion.com/v1${path}`;
+    const headers = { 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' };
+    if (req.headers['authorization']) headers['Authorization'] = req.headers['authorization'];
 
-    const opts = { method: req.method, headers: notionHeaders };
-
+    const opts = { method: req.method, headers };
     if (req.method === 'POST' || req.method === 'PATCH') {
-      const buf = await buffer(req);
-      opts.body = buf.toString();
+      opts.body = JSON.stringify(req.body ?? {});
     }
 
-    const r = await fetch(`https://api.notion.com/v1${path}`, opts);
-    const text = await r.text();
-    res.status(r.status).setHeader('Content-Type', 'application/json').end(text);
+    const r = await fetch(url, opts);
+    const json = await r.json();
+    res.status(r.status).json(json);
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }
