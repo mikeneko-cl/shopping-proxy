@@ -1,5 +1,8 @@
 {
-  "rewrites": [
-    { "source": "/api/proxy", "destination": "/proxy" }
+  "routes": [
+    {
+      "src": "/api/proxy",
+      "dest": "/proxy.js"
+    }
   ]
 }
