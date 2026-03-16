@@ -1,8 +1,11 @@
 {
-  "routes": [
-    {
-      "src": "/api/proxy",
-      "dest": "/proxy.js"
+  "functions": {
+    "proxy.js": {
+      "memory": 128,
+      "maxDuration": 10
     }
+  },
+  "rewrites": [
+    { "source": "/api/proxy", "destination": "/proxy" }
   ]
 }
