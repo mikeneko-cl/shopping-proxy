@@ -1,3 +1,5 @@
+export const config = { api: { bodyParser: true } };
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
@@ -15,30 +17,24 @@ export default async function handler(req, res) {
   }
 
   try {
-    const url = `https://api.notion.com/v1${path}`;
-    const headers = {
+    const notionUrl = `https://api.notion.com/v1${path}`;
+    const notionHeaders = {
       'Notion-Version': '2022-06-28',
       'Content-Type': 'application/json',
     };
-    if (req.headers.authorization) {
-      headers['Authorization'] = req.headers.authorization;
+    if (req.headers['authorization']) {
+      notionHeaders['Authorization'] = req.headers['authorization'];
     }
 
-    const options = { method: req.method, headers };
-    if (req.method !== 'GET' && req.method !== 'DELETE' && req.body) {
-      options.body = JSON.stringify(req.body);
+    const fetchOptions = { method: req.method, headers: notionHeaders };
+    if (req.method === 'POST' || req.method === 'PATCH') {
+      fetchOptions.body = JSON.stringify(req.body || {});
     }
 
-    const response = await fetch(url, options);
-    const text = await response.text();
-    
-    try {
-      const data = JSON.parse(text);
-      res.status(response.status).json(data);
-    } catch {
-      res.status(response.status).send(text);
-    }
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const notionRes = await fetch(notionUrl, fetchOptions);
+    const json = await notionRes.json();
+    return res.status(notionRes.status).json(json);
+  } catch (e) {
+    return res.status(500).json({ error: String(e) });
   }
 }
